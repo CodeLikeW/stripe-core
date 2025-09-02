@@ -89,7 +89,12 @@ import Foundation
         let payload = payload(withEventName: eventName, parameters: parameters)
 
         #if DEBUG
-            NSLog("LOG ANALYTICS: \(payload)")
+        if let data = try? JSONSerialization.data(
+            withJSONObject: payload,
+            options: [.sortedKeys, .prettyPrinted]
+        ), let jsonString = String(data: data, encoding: .utf8) {
+            NSLog("LOG ANALYTICS: \(jsonString)")
+        }
         #endif
 
         guard AnalyticsClientV2.shouldCollectAnalytics else {
