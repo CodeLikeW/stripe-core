@@ -135,22 +135,10 @@ import Foundation
     case addressShow = "mc_address_show"
     case addressCompleted = "mc_address_completed"
 
-    // MARK: - PaymentSheet Force Success
-    case paymentSheetForceSuccess = "mc_force_success"
-
     // MARK: - v1/elements/session
     case paymentSheetElementsSessionLoadFailed = "mc_elements_session_load_failed"
     case paymentSheetElementsSessionCustomerDeserializeFailed = "mc_elements_session_customer_deserialize_failed"
     case paymentSheetElementsSessionEPMLoadFailed = "mc_elements_session_epms_load_failed"
-
-    // MARK: - CustomerSheet card brand choice
-    case customerSheetDisplayCardBrandDropdownIndicator = "cs_display_cbc_dropdown"
-    case customerSheetOpenCardBrandDropdown = "cs_open_cbc_dropdown"
-    case customerSheetCloseCardBrandDropDown = "cs_close_cbc_dropdown"
-    case customerSheetOpenCardBrandEditScreen = "cs_open_edit_screen"
-    case customerSheetUpdateCardBrand = "cs_update_card"
-    case customerSheetUpdateCardBrandFailed = "cs_update_card_failed"
-    case customerSheetClosesEditScreen = "cs_cancel_edit_screen"
 
     // MARK: - Basic Integration
     // Loading
