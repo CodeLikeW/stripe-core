@@ -65,65 +65,6 @@ import Foundation
     case financialConnectionsSheetInitialSynchronizeStarted = "stripeios.financialconnections.sheet.initial_synchronize.started"
     case financialConnectionsSheetInitialSynchronizeCompleted = "stripeios.financialconnections.sheet.initial_synchronize.completed"
 
-    // MARK: - PaymentSheet Init
-    case mcInitCustomCustomer = "mc_custom_init_customer"
-    case mcInitCompleteCustomer = "mc_complete_init_customer"
-    case mcInitCustomApplePay = "mc_custom_init_applepay"
-    case mcInitCompleteApplePay = "mc_complete_init_applepay"
-    case mcInitCustomCustomerApplePay = "mc_custom_init_customer_applepay"
-    case mcInitCompleteCustomerApplePay = "mc_complete_init_customer_applepay"
-    case mcInitCustomDefault = "mc_custom_init_default"
-    case mcInitCompleteDefault = "mc_complete_init_default"
-
-    // MARK: - Embedded Payment Element init
-    case mcInitEmbedded = "mc_embedded_init"
-
-    // MARK: - PaymentSheet Show
-    case mcShowCustomNewPM = "mc_custom_sheet_newpm_show"
-    case mcShowCustomSavedPM = "mc_custom_sheet_savedpm_show"
-    case mcShowCompleteNewPM = "mc_complete_sheet_newpm_show"
-    case mcShowCompleteSavedPM = "mc_complete_sheet_savedpm_show"
-
-    // MARK: - PaymentSheet Payment
-    case mcPaymentCustomNewPMSuccess = "mc_custom_payment_newpm_success"
-    case mcPaymentCustomSavedPMSuccess = "mc_custom_payment_savedpm_success"
-    case mcPaymentCustomApplePaySuccess = "mc_custom_payment_applepay_success"
-    case mcPaymentCustomLinkSuccess = "mc_custom_payment_link_success"
-
-    case mcPaymentCompleteNewPMSuccess = "mc_complete_payment_newpm_success"
-    case mcPaymentCompleteSavedPMSuccess = "mc_complete_payment_savedpm_success"
-    case mcPaymentCompleteApplePaySuccess = "mc_complete_payment_applepay_success"
-    case mcPaymentCompleteLinkSuccess = "mc_complete_payment_link_success"
-
-    case mcPaymentCustomNewPMFailure = "mc_custom_payment_newpm_failure"
-    case mcPaymentCustomSavedPMFailure = "mc_custom_payment_savedpm_failure"
-    case mcPaymentCustomApplePayFailure = "mc_custom_payment_applepay_failure"
-    case mcPaymentCustomLinkFailure = "mc_custom_payment_link_failure"
-
-    case mcPaymentCompleteNewPMFailure = "mc_complete_payment_newpm_failure"
-    case mcPaymentCompleteSavedPMFailure = "mc_complete_payment_savedpm_failure"
-    case mcPaymentCompleteApplePayFailure = "mc_complete_payment_applepay_failure"
-    case mcPaymentCompleteLinkFailure = "mc_complete_payment_link_failure"
-
-    case mcPaymentEmbeddedSuccess = "mc_embedded_payment_success"
-    case mcPaymentEmbeddedFailure = "mc_embedded_payment_failure"
-
-    // MARK: - PaymentSheet Option Selected
-    case mcOptionSelectCustomNewPM = "mc_custom_paymentoption_newpm_select"
-    case mcOptionSelectCustomSavedPM = "mc_custom_paymentoption_savedpm_select"
-    case mcOptionSelectCustomApplePay = "mc_custom_paymentoption_applepay_select"
-    case mcOptionSelectCustomLink = "mc_custom_paymentoption_link_select"
-    case mcOptionSelectCompleteNewPM = "mc_complete_paymentoption_newpm_select"
-    case mcOptionSelectCompleteSavedPM = "mc_complete_paymentoption_savedpm_select"
-    case mcOptionSelectCompleteApplePay = "mc_complete_paymentoption_applepay_select"
-    case mcOptionSelectCompleteLink = "mc_complete_paymentoption_link_select"
-    case mcOptionSelectEmbeddedSavedPM = "mc_embedded_paymentoption_savedpm_select"
-
-    // MARK: - PaymentSheet Saved Payment Method Removed
-    case mcOptionRemoveCustomSavedPM = "mc_custom_paymentoption_removed"
-    case mcOptionRemoveCompleteSavedPM = "mc_complete_paymentoption_removed"
-    case mcOptionRemoveEmbeddedSavedPM = "mc_embedded_paymentoption_removed"
-
     // MARK: - Link Signup
     case linkSignupCheckboxChecked = "link.signup.checkbox_checked"
     case linkSignupFlowPresented = "link.signup.flow_presented"
@@ -197,37 +138,10 @@ import Foundation
     // MARK: - PaymentSheet Force Success
     case paymentSheetForceSuccess = "mc_force_success"
 
-    // MARK: - PaymentSheet initialization
-    case paymentSheetLoadStarted = "mc_load_started"
-    case paymentSheetLoadSucceeded = "mc_load_succeeded"
-    case paymentSheetLoadFailed = "mc_load_failed"
-
-    // MARK: - PaymentSheet dismiss
-    case paymentSheetDismissed = "mc_dismiss"
-
-    // MARK: - PaymentSheet checkout
-    case paymentSheetCarouselPaymentMethodTapped = "mc_carousel_payment_method_tapped"
-    case paymentSheetConfirmButtonTapped = "mc_confirm_button_tapped"
-    case paymentSheetFormShown = "mc_form_shown"
-    case paymentSheetFormInteracted = "mc_form_interacted"
-    case paymentSheetFormCompleted = "mc_form_completed"
-    case paymentSheetCardNumberCompleted = "mc_card_number_completed"
-    case paymentSheetDeferredIntentPaymentMethodMismatch = "mc_deferred_intent_payment_method_mismatch"
-
     // MARK: - v1/elements/session
     case paymentSheetElementsSessionLoadFailed = "mc_elements_session_load_failed"
     case paymentSheetElementsSessionCustomerDeserializeFailed = "mc_elements_session_customer_deserialize_failed"
     case paymentSheetElementsSessionEPMLoadFailed = "mc_elements_session_epms_load_failed"
-
-    // MARK: - PaymentSheet card brand choice
-    case paymentSheetDisplayCardBrandDropdownIndicator = "mc_display_cbc_dropdown"
-    case paymentSheetOpenCardBrandDropdown = "mc_open_cbc_dropdown"
-    case paymentSheetCloseCardBrandDropDown = "mc_close_cbc_dropdown"
-    case paymentSheetOpenCardBrandEditScreen = "mc_open_edit_screen"
-    case paymentSheetUpdateCardBrand = "mc_update_card"
-    case paymentSheetUpdateCardBrandFailed = "mc_update_card_failed"
-    case paymentSheetClosesEditScreen = "mc_cancel_edit_screen"
-    case paymentSheetDisallowedCardBrand = "mc_disallowed_card_brand"
 
     // MARK: - CustomerSheet card brand choice
     case customerSheetDisplayCardBrandDropdownIndicator = "cs_display_cbc_dropdown"
