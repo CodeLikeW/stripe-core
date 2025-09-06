@@ -172,4 +172,5 @@ import Foundation
 
     // MARK: - Telemetry Client
     case fraudDetectionApiFailure = "fraud_detection_data_repository.api_failure"
+    case savedPaymentMethodRadarSessionFailure = "stripeios.saved_payment_method_radar_session_failure"
 }
