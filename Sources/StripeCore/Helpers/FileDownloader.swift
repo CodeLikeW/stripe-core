@@ -24,10 +24,6 @@ import Foundation
     /// Downloads a file from the specified URL and returns a promise that will
     /// resolve to the temporary local file location where the file was downloaded to.
     ///
-    /// The temporary file will be deleted by the file system immediately after the
-    /// promise is observed. If the promise must not be observed on another
-    /// DispatchQueue or the file will be deleted before it can be observed.
-    ///
     /// - Parameter remoteURL: The URL to download the file from.
     public func downloadFileTemporarily(from remoteURL: URL) -> Future<URL> {
         let promise = Promise<URL>()
@@ -44,7 +40,18 @@ import Foundation
                 return promise.reject(with: NSError.stp_genericConnectionError())
             }
 
-            promise.resolve(with: url)
+            // Move the file to a temporary cache directory after generating a unique name to avoid conflicts.
+            let fileManager = FileManager.default
+            let uniqueFileName = "\(UUID().uuidString)_" + remoteURL.lastPathComponent
+            let temporaryFileURL = fileManager.temporaryDirectory.appendingPathComponent(uniqueFileName)
+
+            do {
+                try fileManager.moveItem(at: url, to: temporaryFileURL)
+            } catch {
+                return promise.reject(with: error)
+            }
+
+            promise.resolve(with: temporaryFileURL)
         }
         downloadTask.resume()
 

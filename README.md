@@ -1,6 +1,6 @@
 # Stripe Apple Pay Core iOS/MacOS
 
-Based on Sripe iOS Stripe Core library (as of version 24.0.0), from:
+Based on Sripe iOS Stripe Core library (as of version 24.23.0 - 6e3a3f4f549f7ac3ae98b81e86ed1a4100474af3), from:
 https://github.com/stripe/stripe-ios/tree/master/StripeCore
 
 Stripped out the UIKit parts, which were mainly used for Analytics purposes.
@@ -13,4 +13,4 @@ This SDK is compatible with apps targeting iOS 16.0 or above, and macOS 13.0 or 
 
 ## How to use
 
-This library is only intended to be used as a dependency of Stripe Apple Pay iOS/MacOS SDK.
+This library is only intended to be used as a light-weight dependency of Stripe Apple Pay iOS/MacOS SDK.
