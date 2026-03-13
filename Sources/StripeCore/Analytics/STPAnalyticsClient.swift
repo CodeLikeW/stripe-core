@@ -43,10 +43,15 @@ import Foundation
 
     @objc public var productUsage: Set<String> = Set()
     private var additionalInfoSet: Set<String> = Set()
-    private(set) var urlSession: URLSession = URLSession(
-        configuration: StripeAPIConfiguration.sharedUrlSessionConfiguration
-    )
+    let urlSession: URLSession
     let url = URL(string: "https://q.stripe.com")!
+
+    public init(
+        urlSession: URLSession = URLSession(configuration: StripeAPIConfiguration.sharedUrlSessionConfiguration)
+    ) {
+        self.urlSession = urlSession
+    }
+
     @objc public class func tokenType(fromParameters parameters: [AnyHashable: Any]) -> String? {
         let parameterKeys = parameters.keys
 
@@ -123,12 +128,18 @@ import Foundation
         let payload = payload(from: analytic, apiClient: apiClient)
 
         #if DEBUG
-        NSLog("LOG ANALYTICS: \(analytic.event.rawValue) - \(analytic.params.sorted { $0.0 > $1.0 })")
+        NSLog("V1 LOG ANALYTICS: \(analytic.event.rawValue)")
+        STPAnalyticsClient.debugPrintPayload(payload)
         delegate?.analyticsClientDidLog(analyticsClient: self, payload: payload)
         #endif
 
+        // Unexpected errors should never happen; make sure we fail loudly in our own tests and test apps
+        if analytic.event.rawValue.starts(with: "unexpected_error") {
+            stpAssertionFailure(payload.debugDescription)
+        }
+
         // If in testing, don't log analytic, instead append payload to log history
-        guard !STPAnalyticsClient.isUnitOrUITest else {
+        guard shouldSendAnalytic() else {
             objc_sync_enter(self)
             _testLogHistoryStorage.append(payload)
             objc_sync_exit(self)
@@ -140,11 +151,27 @@ import Foundation
         let task: URLSessionDataTask = urlSession.dataTask(with: request as URLRequest)
         task.resume()
     }
+
+    /// Whether to send the analytic  or not. If `false`, appends payload to `self._testLogHistory` instead.
+    /// This is a function so that it can be overriden by subclasses.
+    public func shouldSendAnalytic() -> Bool {
+        return !STPAnalyticsClient.isUnitOrUITest
+    }
 }
 
 // MARK: - Helpers
 
 extension STPAnalyticsClient {
+    static func debugPrintPayload(_ payload: [String: Any]) {
+        let jsonString = String(
+            data: (try? JSONSerialization.data(
+                withJSONObject: payload,
+                options: [.sortedKeys, .prettyPrinted]
+            )) ?? Data(),
+            encoding: .utf8
+        )
+        print(jsonString ?? "Error converting to string")
+    }
     public func commonPayload(_ apiClient: STPAPIClient) -> [String: Any] {
         var payload: [String: Any] = [:]
         payload["bindings_version"] = StripeAPIConfiguration.STPSDKVersion
@@ -154,11 +181,13 @@ extension STPAnalyticsClient {
         }
         payload["app_name"] = Bundle.stp_applicationName() ?? ""
         payload["app_version"] = Bundle.stp_applicationVersion() ?? ""
+        payload["app_min_os_version"] = Bundle.stp_minimumOSVersion() ?? ""
         payload["plugin_type"] = PluginDetector.shared.pluginType?.rawValue
         payload["network_type"] = NetworkDetector.getConnectionType()
         payload["install"] = InstallMethod.current.rawValue
         payload["publishable_key"] = apiClient.sanitizedPublishableKey ?? "unknown"
         payload["session_id"] = AnalyticsHelper.shared.sessionID
+        payload["timestamp"] = Date().timeIntervalSince1970
         if STPAnalyticsClient.isSimulatorOrTest {
             payload["is_development"] = true
         }

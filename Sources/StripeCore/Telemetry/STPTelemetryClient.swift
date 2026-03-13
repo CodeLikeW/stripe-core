@@ -36,10 +36,8 @@ private let TelemetryURL = URL(string: "https://m.stripe.com/6")!
     /// Sends a payload of telemetry to the Stripe telemetry service.
     ///
     /// - Parameters:
-    ///   - forceSend: ⚠️ Always send the request. Only pass this for testing purposes.
     ///   - completion: Called with the result of the telemetry network request.
     @_spi(STP) public func sendTelemetryData(
-        forceSend: Bool = false,
         completion: ((Result<[String: Any], Error>) -> Void)? = nil
     ) {
         let wrappedCompletion: ((Result<[String: Any], Error>) -> Void) = { result in
@@ -50,8 +48,8 @@ private let TelemetryURL = URL(string: "https://m.stripe.com/6")!
             completion?(result)
         }
 
-        guard forceSend || STPTelemetryClient.shouldSendTelemetry() else {
-            wrappedCompletion(.failure(NSError.stp_genericConnectionError()))
+        guard STPTelemetryClient.shouldSendTelemetry() else {
+            completion?(.failure(NSError.stp_genericConnectionError()))
             return
         }
         sendTelemetryRequest(jsonPayload: payload, completion: wrappedCompletion)
@@ -81,13 +79,10 @@ private let TelemetryURL = URL(string: "https://m.stripe.com/6")!
     }
 
     private let urlSession: URLSession
+    static var _forceShouldSendTelemetryInTests: Bool = false
 
-    @_spi(STP) public class func shouldSendTelemetry() -> Bool {
-        #if targetEnvironment(simulator)
-            return false
-        #else
-            return StripeAPI.advancedFraudSignalsEnabled && NSClassFromString("XCTest") == nil
-        #endif
+    @_spi(STP) public static func shouldSendTelemetry() -> Bool {
+        return StripeAPI.advancedFraudSignalsEnabled && (NSClassFromString("XCTest") == nil || _forceShouldSendTelemetryInTests)
     }
 
     @_spi(STP) public init(
@@ -198,6 +193,7 @@ private let TelemetryURL = URL(string: "https://m.stripe.com/6")!
                 self.fraudDetectionData.sid = sid
                 self.fraudDetectionData.sidCreationDate = Date()
             }
+            UserDefaults.standard.fraudDetectionData = self.fraudDetectionData
             completion?(.success(responseDict))
         }
         task.resume()

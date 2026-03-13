@@ -51,7 +51,6 @@ import Foundation
     }
 
     // Stored STPPaymentConfiguration: Type checking handled in STPAPIClient+Payments.swift.
-    @_spi(STP) public var _stored_configuration: NSObject?
 
     /// In order to perform API requests on behalf of a connected account, e.g. to
     /// create a Source or Payment Method on a connected account, set this property to the ID of the
@@ -75,8 +74,6 @@ import Foundation
         configuration: StripeAPIConfiguration.sharedUrlSessionConfiguration
     )
 
-    @_spi(STP) public var sourcePollers: [String: NSObject]?
-    @_spi(STP) public var sourcePollersQueue: DispatchQueue?
     /// A set of beta headers to add to Stripe API requests e.g. `Set(["alipay_beta=v1"])`.
     @_spi(STP) public var betas: Set<String> = []
 
@@ -88,10 +85,14 @@ import Foundation
     /// Determines the `Stripe-Livemode` header value when the publishable key is a user key
     @_spi(DashboardOnly) public var userKeyLiveMode = true
 
+    private static var didSendTelemetryDataOnInit: Bool = false
+
     // MARK: Initializers
     override public init() {
-        sourcePollers = [:]
-        sourcePollersQueue = DispatchQueue(label: "com.stripe.sourcepollers")
+        if !Self.didSendTelemetryDataOnInit {
+            STPTelemetryClient.shared.sendTelemetryData()
+            Self.didSendTelemetryDataOnInit = true
+        }
     }
 
     /// Initializes an API client with the given publishable key.
@@ -150,10 +151,13 @@ import Foundation
             )
             return
         }
-        let secretKey = publishableKey.hasPrefix("sk_")
         assert(
-            !secretKey,
+            !publishableKey.hasPrefix("sk_"),
             "You are using a secret key. Use a publishable key instead. For more info, see https://stripe.com/docs/keys"
+        )
+        assert(
+            !publishableKey.hasPrefix("rk_"),
+            "You are using a restricted key. Use a publishable key instead. For more info, see https://stripe.com/docs/keys"
         )
         #if !DEBUG
             if publishableKey.lowercased().hasPrefix("pk_test") && !didShowTestmodeKeyWarning {
@@ -224,7 +228,6 @@ import Foundation
     @_spi(STP) public func makeCopy() -> STPAPIClient {
         let client = STPAPIClient()
         client._publishableKey = _publishableKey
-        client._stored_configuration = _stored_configuration
         client.stripeAccount = stripeAccount
         client.appInfo = appInfo
         client.apiURL = apiURL
@@ -331,24 +334,6 @@ extension STPAPIClient {
             ephemeralKeySecret: ephemeralKeySecret,
             consumerPublishableKey: consumerPublishableKey,
             resource: resource,
-            completion: completion
-        )
-    }
-
-    /// Make a POST request using the passed parameters.
-    @_spi(STP) public func post<T: Decodable>(
-        url: URL,
-        parameters: [String: Any],
-        ephemeralKeySecret: String? = nil,
-        consumerPublishableKey: String? = nil,
-        completion: @escaping (Result<T, Error>) -> Void
-    ) {
-        request(
-            method: .post,
-            parameters: parameters,
-            ephemeralKeySecret: ephemeralKeySecret,
-            consumerPublishableKey: consumerPublishableKey,
-            url: url,
             completion: completion
         )
     }
@@ -545,26 +530,23 @@ extension STPAPIClient {
         error: Error?,
         response: URLResponse?
     ) -> Result<T, Error> {
-        if let error = error {
+        if let error {
             return .failure(error)
-        }
-        guard let data = data else {
-            return .failure(NSError.stp_genericFailedToParseResponseError())
         }
 
         do {
-            // HACK: We must first check if EmptyResponses contain an error since it'll always parse successfully.
-            if T.self == EmptyResponse.self,
-                let decodedStripeError = decodeStripeErrorResponse(data: data, response: response)
-            {
-                return .failure(decodedStripeError)
+            guard
+                let httpResponse = response as? HTTPURLResponse,
+                (200...299).contains(httpResponse.statusCode)
+            else {
+                throw NSError.stp_genericFailedToParseResponseError()
             }
 
-            let decodedObject: T = try StripeJSONDecoder.decode(jsonData: data)
+            let decodedObject: T = try StripeJSONDecoder.decode(jsonData: data ?? Data())
             return .success(decodedObject)
         } catch {
             // Try decoding the error from the service if one is available
-            if let decodedStripeError = decodeStripeErrorResponse(data: data, response: response) {
+            if let data, let decodedStripeError = decodeStripeErrorResponse(data: data, response: response) {
                 return .failure(decodedStripeError)
             } else {
                 // Return decoding error directly
@@ -585,7 +567,7 @@ extension STPAPIClient {
         ),
             var apiError = decodedErrorResponse.error
         {
-            apiError.statusCode = (response as? HTTPURLResponse)?.statusCode
+            apiError.httpStatusCode = (response as? HTTPURLResponse)?.statusCode
             apiError.requestID = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "request-id")
 
             decodedError = StripeError.apiError(apiError)
