@@ -10,37 +10,36 @@ import Foundation
 
 extension UserDefaults {
     /// Canonical list of all UserDefaults keys the SDK uses.
-    enum StripePaymentsCoreKeys: String {
+    private enum StripePaymentsCoreKeys: String {
         /// The key for a dictionary FraudDetectionData dictionary.
         case fraudDetectionData = "com.stripe.lib:FraudDetectionDataKey"
     }
-
-    var fraudDetectionData: FraudDetectionData? {
-        get {
-            let key = StripePaymentsCoreKeys.fraudDetectionData.rawValue
-            guard let data = data(forKey: key) else {
-                return nil
-            }
-            do {
-                return try JSONDecoder().decode(FraudDetectionData.self, from: data)
-            } catch let e {
-                assertionFailure("\(e)")
-                return nil
-            }
+    
+    func fraudDetectionData() -> FraudDetectionData? {
+        let key = StripePaymentsCoreKeys.fraudDetectionData.rawValue
+        guard let data = data(forKey: key) else {
+            return nil
         }
-        set {
-            let key = StripePaymentsCoreKeys.fraudDetectionData.rawValue
-            guard let newValue else {
-                removeObject(forKey: key)
-                return
-            }
-            do {
-                let data = try JSONEncoder().encode(newValue)
-                setValue(data, forKey: key)
-            } catch let e {
-                assertionFailure("\(e)")
-                return
-            }
+        do {
+            return try JSONDecoder().decode(FraudDetectionData.self, from: data)
+        } catch let e {
+            assertionFailure("\(e)")
+            return nil
+        }
+    }
+    
+    func saveFraudDetection(data newValue: FraudDetectionData?) {
+        let key = StripePaymentsCoreKeys.fraudDetectionData.rawValue
+        guard let newValue else {
+            removeObject(forKey: key)
+            return
+        }
+        do {
+            let data = try JSONEncoder().encode(newValue)
+            setValue(data, forKey: key)
+        } catch let e {
+            assertionFailure("\(e)")
+            return
         }
     }
 }

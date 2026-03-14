@@ -8,7 +8,7 @@
 import Foundation
 
 @_spi(STP) public class PaymentsSDKVariant {
-    @_spi(STP) public static let variant: String = {
+    @_spi(STP) nonisolated public static let variant: String = {
         if NSClassFromString("STP_Internal_PaymentSheetViewController") != nil {
             // This is the PaymentSheet SDK
             return "paymentsheet"
@@ -29,24 +29,14 @@ import Foundation
         return "unknown"
     }()
 
-    @_spi(STP) public static var ocrTypeString: String {
-        // "STPCardScanner" is STPCardScanner.stp_analyticsIdentifier, but STPCardScanner only exists in Stripe.framework.
-        if STPAnalyticsClient.sharedClient.productUsage.contains(
-            "STPCardScanner"
-        )
-            || STPAnalyticsClient.sharedClient.productUsage.contains(
-                "STPCardScanner_legacy"
-            )
-        {
-            return "stripe"
-        }
+    @MainActor @_spi(STP) public static var ocrTypeString: String {
         return "none"
     }
 
-    @_spi(STP) public static var paymentUserAgent: String {
+    @_spi(STP) nonisolated public static var paymentUserAgent: String {
         var paymentUserAgent = "stripe-ios/\(STPAPIClient.STPSDKVersion)"
         let variant = "variant.\(variant)"
-        let components = [paymentUserAgent, variant] + STPAnalyticsClient.sharedClient.productUsage
+        let components = [paymentUserAgent, variant]
         paymentUserAgent = components.joined(separator: "; ")
         return paymentUserAgent
     }

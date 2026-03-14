@@ -11,25 +11,25 @@ import Foundation
 private let TelemetryURL = URL(string: "https://m.stripe.com/6")!
 
 @_spi(STP) public final class STPTelemetryClient: NSObject {
-    @_spi(STP) public static var shared: STPTelemetryClient = STPTelemetryClient(
+    @MainActor @_spi(STP) public static var shared: STPTelemetryClient = STPTelemetryClient(
         sessionConfiguration: StripeAPIConfiguration.sharedUrlSessionConfiguration
     )
 
     @_spi(STP) public func addTelemetryFields(toParams params: inout [String: Any]) {
-        params["muid"] = fraudDetectionData.muid
-        params["guid"] = fraudDetectionData.guid
-        fraudDetectionData.resetSIDIfExpired()
-        params["sid"] = fraudDetectionData.sid
+        let fraudData = fraudDetectionData()
+        params["muid"] = fraudData.muid
+        params["guid"] = fraudData.guid
+        params["sid"] = fraudData.sid
     }
 
     @_spi(STP) public func paramsByAddingTelemetryFields(
         toParams params: [String: Any]
     ) -> [String: Any] {
         var mutableParams = params
-        mutableParams["muid"] = fraudDetectionData.muid
-        mutableParams["guid"] = fraudDetectionData.guid
-        fraudDetectionData.resetSIDIfExpired()
-        mutableParams["sid"] = fraudDetectionData.sid
+        let fraudData = fraudDetectionData()
+        mutableParams["muid"] = fraudData.muid
+        mutableParams["guid"] = fraudData.guid
+        mutableParams["sid"] = fraudData.sid
         return mutableParams
     }
 
@@ -37,13 +37,15 @@ private let TelemetryURL = URL(string: "https://m.stripe.com/6")!
     ///
     /// - Parameters:
     ///   - completion: Called with the result of the telemetry network request.
-    @_spi(STP) public func sendTelemetryData(
-        completion: ((Result<[String: Any], Error>) -> Void)? = nil
+    @MainActor @_spi(STP) public func sendTelemetryData(
+        completion: (@Sendable (Result<[String: Any], Error>) -> Void)? = nil
     ) {
-        let wrappedCompletion: ((Result<[String: Any], Error>) -> Void) = { result in
+        let wrappedCompletion: (@Sendable (Result<[String: Any], Error>) -> Void) = { result in
             if case .failure(let error) = result {
                 let errorAnalytic = ErrorAnalytic(event: .fraudDetectionApiFailure, error: error)
-                STPAnalyticsClient.sharedClient.log(analytic: errorAnalytic)
+                Task { @MainActor in
+                    STPAnalyticsClient.sharedClient.log(analytic: errorAnalytic)
+                }
             }
             completion?(result)
         }
@@ -52,36 +54,37 @@ private let TelemetryURL = URL(string: "https://m.stripe.com/6")!
             completion?(.failure(NSError.stp_genericConnectionError()))
             return
         }
+        let payload = payload(deviceSupportsApplePay: StripeAPI.deviceSupportsApplePay())
         sendTelemetryRequest(jsonPayload: payload, completion: wrappedCompletion)
     }
 
-    @_spi(STP) public func updateFraudDetectionIfNecessary(
-        completion: @escaping ((Result<FraudDetectionData, Error>) -> Void)
+    @_spi(STP) func updateFraudDetectionIfNecessary(
+        completion: @escaping (@Sendable (Result<FraudDetectionData, Error>) -> Void)
     ) {
-        fraudDetectionData.resetSIDIfExpired()
-        if fraudDetectionData.muid == nil || fraudDetectionData.sid == nil {
+        let fraudData = fraudDetectionData()
+        if fraudData.muid == nil || fraudData.sid == nil {
             sendTelemetryRequest(
                 jsonPayload: [
-                    "muid": fraudDetectionData.muid ?? "",
-                    "guid": fraudDetectionData.guid ?? "",
-                    "sid": fraudDetectionData.sid ?? "",
+                    "muid": fraudData.muid ?? "",
+                    "guid": fraudData.guid ?? "",
+                    "sid": fraudData.sid ?? "",
                 ]) { result in
                     switch result {
                     case .failure(let error):
                         completion(.failure(error))
                     case .success:
-                        completion(.success(self.fraudDetectionData))
+                        completion(.success(fraudData))
                     }
                 }
         } else {
-            completion(.success(fraudDetectionData))
+            completion(.success(fraudData))
         }
     }
 
     private let urlSession: URLSession
-    static var _forceShouldSendTelemetryInTests: Bool = false
+    @MainActor static var _forceShouldSendTelemetryInTests: Bool = false
 
-    @_spi(STP) public static func shouldSendTelemetry() -> Bool {
+    @MainActor @_spi(STP) public static func shouldSendTelemetry() -> Bool {
         return StripeAPI.advancedFraudSignalsEnabled && (NSClassFromString("XCTest") == nil || _forceShouldSendTelemetryInTests)
     }
 
@@ -93,9 +96,9 @@ private let TelemetryURL = URL(string: "https://m.stripe.com/6")!
     }
 
     private var language = Locale.autoupdatingCurrent.identifier
-    private lazy var fraudDetectionData = {
-        return FraudDetectionData.shared
-    }()
+    private func fraudDetectionData() -> FraudDetectionData {
+        FraudDetectionData().resetSIDIfExpired()
+    }
 
     private var deviceModel: String = {
         var systemInfo = utsname()
@@ -105,7 +108,7 @@ private let TelemetryURL = URL(string: "https://m.stripe.com/6")!
                 to: CChar.self,
                 capacity: 1
             ) { ptr in
-                String.init(validatingUTF8: ptr)
+                String(validatingCString: ptr)
             }
         }
         return model ?? "Unknown"
@@ -126,7 +129,7 @@ private let TelemetryURL = URL(string: "https://m.stripe.com/6")!
         return nil
     }
 
-    private var payload: [String: Any] {
+    private func payload(deviceSupportsApplePay: Bool) -> [String: Any] {
         var payload: [String: Any] = [:]
         var data: [String: Any] = [:]
         if let encode = encodeValue(language) {
@@ -138,14 +141,14 @@ private let TelemetryURL = URL(string: "https://m.stripe.com/6")!
         payload["a"] = data
 
         // Don't pass expired SIDs to m.stripe.com
-        fraudDetectionData.resetSIDIfExpired()
+        let fraudData = fraudDetectionData()
 
         let otherData: [String: Any] = [
-            "d": fraudDetectionData.muid ?? "",
-            "e": fraudDetectionData.sid ?? "",
+            "d": fraudData.muid ?? "",
+            "e": fraudData.sid ?? "",
             "k": Bundle.stp_applicationName() ?? "",
             "l": Bundle.stp_applicationVersion() ?? "",
-            "m": NSNumber(value: StripeAPI.deviceSupportsApplePay()),
+            "m": NSNumber(value: deviceSupportsApplePay),
             "s": deviceModel,
         ]
         payload["b"] = otherData
@@ -157,9 +160,10 @@ private let TelemetryURL = URL(string: "https://m.stripe.com/6")!
 
     private func sendTelemetryRequest(
         jsonPayload: [String: Any],
-        completion: ((Result<[String: Any], Error>) -> Void)? = nil
+        completion: (@Sendable (Result<[String: Any], Error>) -> Void)? = nil
     ) {
         var request = URLRequest(url: TelemetryURL)
+        let fraudData = fraudDetectionData()
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let data = try? JSONSerialization.data(
@@ -179,21 +183,12 @@ private let TelemetryURL = URL(string: "https://m.stripe.com/6")!
                 completion?(.failure(error ?? NSError.stp_genericFailedToParseResponseError()))
                 return
             }
-
+            
             // Update fraudDetectionData
-            if let muid = responseDict["muid"] as? String {
-                self.fraudDetectionData.muid = muid
-            }
-            if let guid = responseDict["guid"] as? String {
-                self.fraudDetectionData.guid = guid
-            }
-            if self.fraudDetectionData.sid == nil,
-                let sid = responseDict["sid"] as? String
-            {
-                self.fraudDetectionData.sid = sid
-                self.fraudDetectionData.sidCreationDate = Date()
-            }
-            UserDefaults.standard.fraudDetectionData = self.fraudDetectionData
+            let updatedData = fraudData.updateWith(sid: responseDict["sid"] as? String,
+                                                   muid: responseDict["muid"] as? String,
+                                                   guid: responseDict["guid"] as? String)
+            UserDefaults.standard.saveFraudDetection(data: updatedData)
             completion?(.success(responseDict))
         }
         task.resume()

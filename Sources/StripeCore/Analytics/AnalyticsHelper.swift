@@ -11,7 +11,7 @@ import Foundation
         case linkPopup
     }
 
-    @_spi(STP) public static let shared = AnalyticsHelper()
+    @MainActor @_spi(STP) public static let shared = AnalyticsHelper()
 
     @_spi(STP) public private(set) var sessionID: String?
 

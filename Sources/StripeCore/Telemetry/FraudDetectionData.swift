@@ -14,20 +14,24 @@ private let SIDLifetime: TimeInterval = 30 * 60  // 30 minutes
 ///
 /// - Note: See `STPTelemetryClient`.
 /// - Note: See `StripeAPI.advancedFraudSignalsEnabled`.
-@_spi(STP) public final class FraudDetectionData: Codable {
-    @_spi(STP) public static let shared: FraudDetectionData =
-        // Load initial value from UserDefaults
-        UserDefaults.standard.fraudDetectionData ?? FraudDetectionData()
-
-    @_spi(STP) public var muid: String?
-    @_spi(STP) public var guid: String?
-    @_spi(STP) public var sid: String?
-
+struct FraudDetectionData: Codable, Sendable, Equatable {
+    
+    var muid: String?
+    var guid: String?
+    var sid: String?
     /// The approximate time that the sid was generated from m.stripe.com
     /// Intended to be used to expire the sid after `SIDLifetime` seconds
     /// - Note: This class is a dumb container; users must set this value appropriately.
     var sidCreationDate: Date?
-
+    
+    init() {
+        if let savedData = UserDefaults.standard.fraudDetectionData() {
+            self = savedData
+        } else {
+            self = FraudDetectionData(sid: nil, muid: nil, guid: nil, sidCreationDate: nil)
+        }
+    }
+    
     init(
         sid: String? = nil,
         muid: String? = nil,
@@ -39,29 +43,31 @@ private let SIDLifetime: TimeInterval = 30 * 60  // 30 minutes
         self.guid = guid
         self.sidCreationDate = sidCreationDate
     }
-
-    func resetSIDIfExpired() {
+    
+    func resetSIDIfExpired() -> FraudDetectionData {
         guard let sidCreationDate = sidCreationDate else {
-            return
+            return self
         }
         let thirtyMinutesAgo = Date(timeIntervalSinceNow: -SIDLifetime)
         if sidCreationDate < thirtyMinutesAgo {
-            sid = nil
+            return FraudDetectionData(sid: nil, muid: muid, guid: guid, sidCreationDate: sidCreationDate)
         }
+        return self
     }
-
-    func reset() {
-        self.sid = nil
-        self.muid = nil
-        self.guid = nil
-        self.sidCreationDate = nil
+    
+    func updateWith(sid: String?, muid: String?, guid: String?) -> FraudDetectionData {
+        var fraudData = self
+        if let sid {
+            fraudData.sid = sid
+            fraudData.sidCreationDate = Date()
+        }
+        if let muid {
+            fraudData.muid = muid
+        }
+        if let guid {
+            fraudData.guid = guid
+        }
+        return fraudData
     }
-}
-
-extension FraudDetectionData: Equatable {
-    @_spi(STP) public static func == (lhs: FraudDetectionData, rhs: FraudDetectionData) -> Bool {
-        return
-            lhs.muid == rhs.muid && lhs.sid == rhs.sid && lhs.guid == rhs.guid
-            && lhs.sidCreationDate == rhs.sidCreationDate
-    }
+    
 }

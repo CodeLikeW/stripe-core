@@ -9,14 +9,6 @@
 import Foundation
 
 extension Dictionary {
-    static func stp_deepMerge(old: Any, new: Any) throws -> Any {
-        if let oldDictionary = old as? [String: Any],
-            let newDictionary = new as? [String: Any]
-        {
-            return try oldDictionary.merging(newDictionary, uniquingKeysWith: stp_deepMerge)
-        }
-        return new
-    }
 
     /// Return the dictionary, minus any fields that also exist in
     /// the passed dictionary.
