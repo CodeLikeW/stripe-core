@@ -9,11 +9,13 @@
 import Foundation
 
 extension URLSession {
+    @MainActor
     @_spi(STP) public func stp_performDataTask(
         with request: URLRequest,
-        completionHandler: @escaping (Data?, URLResponse?, Error?) -> Void,
+        completionHandler: @escaping @Sendable (Data?, URLResponse?, Error?) -> Void,
         retryCount: Int = StripeAPI.maxRetries
     ) {
+        let maxRetries = StripeAPI.maxRetries
         let task = dataTask(with: request) { (data, response, error) in
             if let httpResponse = response as? HTTPURLResponse,
                 httpResponse.statusCode == 429,
@@ -21,17 +23,19 @@ extension URLSession {
             {
                 // Add some backoff time with a little bit of jitter:
                 let delayTime = TimeInterval(
-                    pow(Double(1 + StripeAPI.maxRetries - retryCount), Double(2))
+                    pow(Double(1 + maxRetries - retryCount), Double(2))
                         + .random(in: 0..<0.5)
                 )
 
                 let fireDate = Date() + delayTime
                 self.delegateQueue.schedule(after: .init(fireDate)) {
-                    self.stp_performDataTask(
-                        with: request,
-                        completionHandler: completionHandler,
-                        retryCount: retryCount - 1
-                    )
+                    Task { @MainActor [weak self] in
+                        self?.stp_performDataTask(
+                            with: request,
+                            completionHandler: completionHandler,
+                            retryCount: retryCount - 1
+                        )
+                    }
                 }
             } else {
                 completionHandler(data, response, error)

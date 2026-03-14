@@ -9,15 +9,15 @@
 import Foundation
 
 /// A client for making connections to the Stripe API.
-@objc public class STPAPIClient: NSObject {
+@MainActor @objc public class STPAPIClient: NSObject {
     /// The current version of this library.
-    @objc public static let STPSDKVersion = StripeAPIConfiguration.STPSDKVersion
+    @objc nonisolated public static let STPSDKVersion = StripeAPIConfiguration.STPSDKVersion
 
     /// A shared singleton API client.
     ///
     /// By default, the SDK uses this instance to make API requests
     /// eg in STPPaymentHandler, STPPaymentContext, STPCustomerContext, etc.
-    @objc(sharedClient) public static let shared: STPAPIClient = {
+    @MainActor @objc(sharedClient) public static let shared: STPAPIClient = {
         let client = STPAPIClient()
         return client
     }()
@@ -85,7 +85,7 @@ import Foundation
     /// Determines the `Stripe-Livemode` header value when the publishable key is a user key
     @_spi(DashboardOnly) public var userKeyLiveMode = true
 
-    private static var didSendTelemetryDataOnInit: Bool = false
+    @MainActor private static var didSendTelemetryDataOnInit: Bool = false
 
     // MARK: Initializers
     override public init() {
@@ -268,7 +268,7 @@ extension STPAPIClient {
         parameters: [String: Any],
         ephemeralKeySecret: String? = nil,
         consumerPublishableKey: String? = nil,
-        completion: @escaping (
+        completion: @escaping @Sendable (
             Result<T, Error>
         ) -> Void
     ) {
@@ -288,7 +288,7 @@ extension STPAPIClient {
         parameters: [String: Any],
         ephemeralKeySecret: String? = nil,
         consumerPublishableKey: String? = nil,
-        completion: @escaping (
+        completion: @escaping @Sendable(
             Result<T, Error>
         ) -> Void
     ) {
@@ -302,31 +302,13 @@ extension STPAPIClient {
         )
     }
 
-    /// Make a GET request using the passed parameters.
-    ///
-    /// - Returns: a promise that is fullfilled when the request is complete.
-    @_spi(STP) public func get<T: Decodable>(
-        resource: String,
-        parameters: [String: Any],
-        ephemeralKeySecret: String? = nil,
-        consumerPublishableKey: String? = nil
-    ) -> Promise<T> {
-        return request(
-            method: .get,
-            parameters: parameters,
-            ephemeralKeySecret: ephemeralKeySecret,
-            consumerPublishableKey: consumerPublishableKey,
-            resource: resource
-        )
-    }
-
     /// Make a POST request using the passed parameters.
     @_spi(STP) public func post<T: Decodable>(
         resource: String,
         parameters: [String: Any],
         ephemeralKeySecret: String? = nil,
         consumerPublishableKey: String? = nil,
-        completion: @escaping (Result<T, Error>) -> Void
+        completion: @escaping @Sendable (Result<T, Error>) -> Void
     ) {
         request(
             method: .post,
@@ -338,51 +320,13 @@ extension STPAPIClient {
         )
     }
 
-    /// Make a POST request using the passed parameters.
-    ///
-    /// - Returns: a promise that is fullfilled when the request is complete.
-    @_spi(STP) public func post<T: Decodable>(
-        resource: String,
-        parameters: [String: Any],
-        ephemeralKeySecret: String? = nil,
-        consumerPublishableKey: String? = nil
-    ) -> Promise<T> {
-        return request(
-            method: .post,
-            parameters: parameters,
-            ephemeralKeySecret: ephemeralKeySecret,
-            consumerPublishableKey: consumerPublishableKey,
-            resource: resource
-        )
-    }
-
-    func request<T: Decodable>(
-        method: HTTPMethod,
-        parameters: [String: Any],
-        ephemeralKeySecret: String?,
-        consumerPublishableKey: String?,
-        resource: String
-    ) -> Promise<T> {
-        let promise = Promise<T>()
-        self.request(
-            method: method,
-            parameters: parameters,
-            ephemeralKeySecret: ephemeralKeySecret,
-            consumerPublishableKey: consumerPublishableKey,
-            resource: resource
-        ) { result in
-            promise.fullfill(with: result)
-        }
-        return promise
-    }
-
     func request<T: Decodable>(
         method: HTTPMethod,
         parameters: [String: Any],
         ephemeralKeySecret: String?,
         consumerPublishableKey: String?,
         resource: String,
-        completion: @escaping (Result<T, Error>) -> Void
+        completion: @escaping @Sendable (Result<T, Error>) -> Void
     ) {
         let url = apiURL.appendingPathComponent(resource)
         request(
@@ -401,7 +345,7 @@ extension STPAPIClient {
         ephemeralKeySecret: String?,
         consumerPublishableKey: String?,
         url: URL,
-        completion: @escaping (Result<T, Error>) -> Void
+        completion: @escaping @Sendable (Result<T, Error>) -> Void
     ) {
         var request = configuredRequest(for: url)
         switch method {
@@ -418,11 +362,6 @@ extension STPAPIClient {
                 "application/x-www-form-urlencoded",
                 forHTTPHeaderField: "Content-Type"
             )
-            #if DEBUG
-            if StripeAPIConfiguration.includeDebugParamsHeader {
-                request.setValue(URLEncoder.queryString(from: parameters), forHTTPHeaderField: "X-Stripe-Mock-Request")
-            }
-            #endif
         }
 
         request.httpMethod = method.rawValue
@@ -440,30 +379,11 @@ extension STPAPIClient {
     }
 
     /// Make a POST request using the passed Encodable object.
-    ///
-    /// - Returns: a promise that is fullfilled when the request is complete.
-    @_spi(STP) public func post<I: Encodable, O: Decodable>(
-        resource: String,
-        object: I,
-        ephemeralKeySecret: String? = nil
-    ) -> Promise<O> {
-        let promise = Promise<O>()
-        self.post(
-            resource: resource,
-            object: object,
-            ephemeralKeySecret: ephemeralKeySecret
-        ) { result in
-            promise.fullfill(with: result)
-        }
-        return promise
-    }
-
-    /// Make a POST request using the passed Encodable object.
     @_spi(STP) public func post<I: Encodable, O: Decodable>(
         resource: String,
         object: I,
         ephemeralKeySecret: String? = nil,
-        completion: @escaping (Result<O, Error>) -> Void
+        completion: @escaping @Sendable (Result<O, Error>) -> Void
     ) {
         let url = apiURL.appendingPathComponent(resource)
         post(
@@ -479,7 +399,7 @@ extension STPAPIClient {
         url: URL,
         object: I,
         ephemeralKeySecret: String? = nil,
-        completion: @escaping (Result<O, Error>) -> Void
+        completion: @escaping @Sendable (Result<O, Error>) -> Void
     ) {
         do {
             let jsonDictionary = try object.encodeJSONDictionary()
@@ -511,7 +431,7 @@ extension STPAPIClient {
 
     func sendRequest<T: Decodable>(
         request: URLRequest,
-        completion: @escaping (Result<T, Error>) -> Void
+        completion: @escaping @Sendable (Result<T, Error>) -> Void
     ) {
         urlSession.stp_performDataTask(
             with: request,

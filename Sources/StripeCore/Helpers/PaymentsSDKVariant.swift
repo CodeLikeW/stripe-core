@@ -29,7 +29,7 @@ import Foundation
         return "unknown"
     }()
 
-    @_spi(STP) public static var ocrTypeString: String {
+    @MainActor @_spi(STP) public static var ocrTypeString: String {
         // "STPCardScanner" is STPCardScanner.stp_analyticsIdentifier, but STPCardScanner only exists in Stripe.framework.
         if STPAnalyticsClient.sharedClient.productUsage.contains(
             "STPCardScanner"
@@ -43,7 +43,7 @@ import Foundation
         return "none"
     }
 
-    @_spi(STP) public static var paymentUserAgent: String {
+    @MainActor @_spi(STP) public static var paymentUserAgent: String {
         var paymentUserAgent = "stripe-ios/\(STPAPIClient.STPSDKVersion)"
         let variant = "variant.\(variant)"
         let components = [paymentUserAgent, variant] + STPAnalyticsClient.sharedClient.productUsage

@@ -41,5 +41,4 @@ import Foundation
     public let size: Int
     /// The type of the file returned (e.g., `csv`, `pdf`, `jpg`, or `png`).
     public let type: String?
-    public var _allResponseFieldsStorage: NonEncodableParameters?
 }
