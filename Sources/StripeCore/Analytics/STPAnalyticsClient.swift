@@ -22,8 +22,8 @@ import Foundation
     func analyticsClientDidLog(analyticsClient: STPAnalyticsClient, payload: [String: Any])
 }
 
-@_spi(STP) public class STPAnalyticsClient: NSObject, STPAnalyticsClientProtocol {
-    @objc public static let sharedClient = STPAnalyticsClient()
+@MainActor @_spi(STP) public class STPAnalyticsClient: NSObject, @MainActor STPAnalyticsClientProtocol {
+    @MainActor @objc public static let sharedClient = STPAnalyticsClient()
     /// When this class logs a payload in an XCTestCase, it's added to `_testLogHistory` instead of being sent over the network.
     /// This is a hack - ideally, we inject a different analytics client in our tests. This is an escape hatch until we can make that (significant) refactor
     private var _testLogHistoryStorage: [[String: Any]] = []
@@ -127,12 +127,6 @@ import Foundation
     func log(analytic: Analytic, apiClient: STPAPIClient = .shared, notificationCenter: NotificationCenter = .default) {
         let payload = payload(from: analytic, apiClient: apiClient)
 
-        #if DEBUG
-        NSLog("V1 LOG ANALYTICS: \(analytic.event.rawValue)")
-        STPAnalyticsClient.debugPrintPayload(payload)
-        delegate?.analyticsClientDidLog(analyticsClient: self, payload: payload)
-        #endif
-
         // Unexpected errors should never happen; make sure we fail loudly in our own tests and test apps
         if analytic.event.rawValue.starts(with: "unexpected_error") {
             stpAssertionFailure(payload.debugDescription)
@@ -162,16 +156,6 @@ import Foundation
 // MARK: - Helpers
 
 extension STPAnalyticsClient {
-    static func debugPrintPayload(_ payload: [String: Any]) {
-        let jsonString = String(
-            data: (try? JSONSerialization.data(
-                withJSONObject: payload,
-                options: [.sortedKeys, .prettyPrinted]
-            )) ?? Data(),
-            encoding: .utf8
-        )
-        print(jsonString ?? "Error converting to string")
-    }
     public func commonPayload(_ apiClient: STPAPIClient) -> [String: Any] {
         var payload: [String: Any] = [:]
         payload["bindings_version"] = StripeAPIConfiguration.STPSDKVersion
@@ -182,7 +166,7 @@ extension STPAnalyticsClient {
         payload["app_name"] = Bundle.stp_applicationName() ?? ""
         payload["app_version"] = Bundle.stp_applicationVersion() ?? ""
         payload["app_min_os_version"] = Bundle.stp_minimumOSVersion() ?? ""
-        payload["plugin_type"] = PluginDetector.shared.pluginType?.rawValue
+        payload["plugin_type"] = nil
         payload["network_type"] = NetworkDetector.getConnectionType()
         payload["install"] = InstallMethod.current.rawValue
         payload["publishable_key"] = apiClient.sanitizedPublishableKey ?? "unknown"

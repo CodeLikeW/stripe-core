@@ -21,8 +21,7 @@ import Foundation
 
         if value is UnknownFieldsEncodable {
             let jsonDictionary = try self.encodeJSONDictionary(
-                value,
-                includingUnknownFields: includingUnknownFields
+                value
             )
             return try JSONSerialization.data(
                 withJSONObject: jsonDictionary,
@@ -37,21 +36,10 @@ import Foundation
     }
 
     @_spi(STP) public func encodeJSONDictionary<T>(
-        _ value: T,
-        includingUnknownFields: Bool = true
+        _ value: T
     ) throws -> [String: Any] where T: Encodable {
         var outputFormatting = self.outputFormatting
         outputFormatting.insert(.fragmentsAllowed)
-
-        // Set up a dictionary on the encoder to fill with additionalAPIParameters during encoding
-        let dictionary = NSMutableDictionary()
-        userInfo[UnknownFieldsEncodableSourceStorageKey] = dictionary
-        userInfo[StripeIncludeUnknownFieldsKey] = includingUnknownFields
-
-        if let seValue = value as? UnknownFieldsEncodable {
-            // Encode the top-level additionalAPIParameters into the userInfo
-            seValue.applyUnknownFieldEncodingTransforms(userInfo: userInfo, codingPath: [])
-        }
 
         // Encode the object to JSON data
         let jsonData = try JSONSerialization.data(
@@ -60,16 +48,7 @@ import Foundation
         )
 
         // Convert the JSON data into a JSON dictionary
-        var jsonDictionary =
-            try JSONSerialization.jsonObject(with: jsonData, options: []) as! [String: Any]
-
-        // Merge in the additional parameters we collected in our encoder userInfo's NSMutableDictionary during encoding
-        try jsonDictionary.merge(
-            dictionary as! [String: Any],
-            uniquingKeysWith: [String: Any].stp_deepMerge
-        )
-
-        return jsonDictionary
+        return try JSONSerialization.jsonObject(with: jsonData, options: []) as! [String: Any]
     }
 }
 
@@ -216,9 +195,6 @@ where K: CodingKey {
             return
         }
         let newPath = codingPath + [key]
-        if let seValue = value as? UnknownFieldsEncodable {
-            seValue.applyUnknownFieldEncodingTransforms(userInfo: userInfo, codingPath: newPath)
-        }
         try encode(object: castToNSObject(codingPath: newPath, value), forKey: key)
     }
 
@@ -353,9 +329,6 @@ struct STPUnkeyedEncodingContainer: UnkeyedEncodingContainer, StripeEncodingCont
             return
         }
         let newPath = codingPath + [STPCodingKey(intValue: count)!]
-        if let seValue = value as? UnknownFieldsEncodable {
-            seValue.applyUnknownFieldEncodingTransforms(userInfo: userInfo, codingPath: newPath)
-        }
         try array.add(castToNSObject(codingPath: newPath, value))
 
         count += 1
@@ -471,9 +444,6 @@ struct STPSingleValueEncodingContainer: SingleValueEncodingContainer, StripeEnco
         if value is NonEncodableParameters {
             // Don't encode this
             return
-        }
-        if let seValue = value as? UnknownFieldsEncodable {
-            seValue.applyUnknownFieldEncodingTransforms(userInfo: userInfo, codingPath: codingPath)
         }
         encodingBlock(try castToNSObject(value))
     }

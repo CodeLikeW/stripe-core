@@ -13,9 +13,9 @@ import Foundation
 }
 
 @_spi(STP) public class STPURLCallbackHandler: NSObject {
-    @_spi(STP) public static var sharedHandler: STPURLCallbackHandler = STPURLCallbackHandler()
+    @MainActor @_spi(STP) public static var sharedHandler: STPURLCallbackHandler = STPURLCallbackHandler()
 
-    @objc @_spi(STP) public class func shared() -> STPURLCallbackHandler {
+    @MainActor @objc @_spi(STP) public static func shared() -> STPURLCallbackHandler {
         return sharedHandler
     }
 
