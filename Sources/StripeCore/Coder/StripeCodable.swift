@@ -16,20 +16,15 @@ import Foundation
 
 /// A Decodable object that retains unknown fields.
 /// :nodoc:
-public protocol UnknownFieldsDecodable: Decodable {
-    /// This should not be used directly.
-    /// Use the `allResponseFields` accessor instead.
-    /// :nodoc:
-    var _allResponseFieldsStorage: NonEncodableParameters? { get set }
+public protocol UnknownFieldsDecodable: Decodable, Sendable {
 }
 
 /// An Encodable object that allows unknown fields to be set.
 /// :nodoc:
-public protocol UnknownFieldsEncodable: Encodable {
+public protocol UnknownFieldsEncodable: Encodable, Sendable {
     /// This should not be used directly.
     /// Use the `additionalParameters` accessor instead.
     /// :nodoc:
-    var _additionalParametersStorage: NonEncodableParameters? { get set }
 }
 
 /// A Decodable enum that sets an "unparsable" case
@@ -51,49 +46,9 @@ public protocol SafeEnumDecodable: Decodable {
 public protocol SafeEnumCodable: Encodable, SafeEnumDecodable {}
 
 extension UnknownFieldsDecodable {
-    /// A dictionary containing all response fields from the original JSON,
-    /// including unknown fields.
-    public internal(set) var allResponseFields: [String: Any] {
-        get {
-            self._allResponseFieldsStorage?.storage ?? [:]
-        }
-        set {
-            if self._allResponseFieldsStorage == nil {
-                self._allResponseFieldsStorage = NonEncodableParameters()
-            }
-            self._allResponseFieldsStorage!.storage = newValue
-        }
-    }
 
     static func decodedObject(jsonData: Data) throws -> Self {
         return try StripeJSONDecoder.decode(jsonData: jsonData)
-    }
-}
-
-extension UnknownFieldsEncodable {
-    /// You can use this property to add additional fields to an API request that
-    /// are not explicitly defined by the object's interface.
-    ///
-    /// This can be useful when using beta features that haven't been added to the Stripe SDK yet.
-    /// For example, if the /v1/tokens API began to accept a beta field called "test_field",
-    /// you might do the following:
-    ///
-    /// ```swift
-    /// var cardParams = PaymentMethodParams.Card()
-    /// // add card values
-    /// cardParams.additionalParameters = ["test_field": "example_value"]
-    /// PaymentsAPI.shared.createToken(withParameters: cardParams completion:...)
-    /// ```
-    public var additionalParameters: [String: Any] {
-        get {
-            self._additionalParametersStorage?.storage ?? [:]
-        }
-        set {
-            if self._additionalParametersStorage == nil {
-                self._additionalParametersStorage = NonEncodableParameters()
-            }
-            self._additionalParametersStorage!.storage = newValue
-        }
     }
 }
 
@@ -101,8 +56,7 @@ extension Encodable {
     func encodeJSONDictionary(includingUnknownFields: Bool = true) throws -> [String: Any] {
         let encoder = StripeJSONEncoder()
         return try encoder.encodeJSONDictionary(
-            self,
-            includingUnknownFields: includingUnknownFields
+            self
         )
     }
 }

@@ -38,21 +38,17 @@ import Foundation
     // the PaymentIntent or PaymentMethod.
 
     /// Types of errors presented by the API.
-    @_spi(STP) public enum ErrorType: String, SafeEnumCodable {
+    @_spi(STP) public enum ErrorType: String, SafeEnumCodable, Sendable {
         case apiError = "api_error"
         case cardError = "card_error"
         case idempotencyError = "idempotency_error"
         case invalidRequestError = "invalid_request_error"
         case unparsable
     }
-
-    public var _allResponseFieldsStorage: NonEncodableParameters?
 }
 
 @_spi(STP) public struct StripeAPIErrorResponse: UnknownFieldsDecodable {
     @_spi(STP) public var error: StripeAPIError?
-
-    public var _allResponseFieldsStorage: NonEncodableParameters?
 }
 
 extension NSError {

@@ -39,12 +39,17 @@ import Foundation
 
     static let UnknownString = "STPSTRINGNOTFOUND"
 
-    public class func localizedStripeString(
+    public static func localizedStripeString(
         forKey key: String,
-        bundleLocator: BundleLocatorProtocol.Type
+        bundleLocator: BundleLocatorProtocol.Type,
+        languageOverride: String? = nil
     ) -> String {
-        if languageOverride != nil {
-            return testing_localizedStripeString(forKey: key, bundleLocator: bundleLocator)
+        if let languageOverride {
+            return testing_localizedStripeString(
+                forKey: key,
+                bundleLocator: bundleLocator,
+                languageOverride: languageOverride
+            )
         }
         if localizedStripeStringUseMainBundle(bundleLocator: bundleLocator) {
             // Per https://developer.apple.com/documentation/foundation/bundle/1417694-localizedstring,
@@ -69,18 +74,14 @@ import Foundation
     }
 
     // MARK: - Testing
-    static var languageOverride: String?
-    static func overrideLanguage(to string: String?) {
-        STPLocalizationUtils.languageOverride = string
-    }
-    static func testing_localizedStripeString(
+   static func testing_localizedStripeString(
         forKey key: String,
-        bundleLocator: BundleLocatorProtocol.Type
+        bundleLocator: BundleLocatorProtocol.Type,
+        languageOverride: String? = nil
     ) -> String {
         var bundle = bundleLocator.resourcesBundle
 
-        if let languageOverride = languageOverride {
-
+        if let languageOverride {
             let lprojPath = bundle.path(forResource: languageOverride, ofType: "lproj")
             if let lprojPath = lprojPath {
                 bundle = Bundle(path: lprojPath)!

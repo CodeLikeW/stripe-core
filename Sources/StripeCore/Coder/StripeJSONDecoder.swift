@@ -43,13 +43,8 @@ import Foundation
             )
         }
         let decoder = _stpinternal_JSONDecoder(jsonObject: object)
-        userInfo[UnknownFieldsDecodableSourceStorageKey] = data
         decoder.userInfo = userInfo
         let value: T = try decoder.castFromNSObject()
-        if var sdValue = value as? UnknownFieldsDecodable {
-            try sdValue.applyUnknownFieldDecodingTransforms(userInfo: userInfo, codingPath: [])
-            return sdValue as! T
-        }
         return value
     }
 }
@@ -187,10 +182,6 @@ where K: CodingKey {
     func _decode<T>(_ type: T.Type, forKey key: K) throws -> T where T: Decodable {
         let newPath = codingPath + [key]
         let value: T = try castFromNSObject(codingPath: newPath, type, _objectForKey(key))
-        if var sdValue = value as? UnknownFieldsDecodable {
-            try sdValue.applyUnknownFieldDecodingTransforms(userInfo: userInfo, codingPath: newPath)
-            return sdValue as! T
-        }
         return value
     }
 
@@ -323,10 +314,6 @@ private struct STPUnkeyedDecodingContainer: UnkeyedDecodingContainer, STPDecodin
         let newPath = codingPath + [STPCodingKey(intValue: currentIndex)!]
 
         let value: T = try castFromNSObject(codingPath: newPath, type, _popObject())
-        if var sdValue = value as? UnknownFieldsDecodable {
-            try sdValue.applyUnknownFieldDecodingTransforms(userInfo: userInfo, codingPath: newPath)
-            return sdValue as! T
-        }
         return value
     }
 
@@ -432,13 +419,6 @@ private struct STPSingleValueDecodingContainer: SingleValueDecodingContainer,
 
     func _decode<T>(_ type: T.Type) throws -> T where T: Decodable {
         let value: T = try castFromNSObject(codingPath: codingPath, type, object)
-        if var sdValue = value as? UnknownFieldsDecodable {
-            try sdValue.applyUnknownFieldDecodingTransforms(
-                userInfo: userInfo,
-                codingPath: codingPath
-            )
-            return sdValue as! T
-        }
         return value
     }
 

@@ -10,20 +10,24 @@ import Foundation
 import PassKit
 
 /// A top-level class that imports the rest of the Stripe SDK.
-@objc public class StripeAPI: NSObject {
+@MainActor @objc public class StripeAPI: NSObject {
     /// Set this to your Stripe publishable API key, obtained from https://dashboard.stripe.com/apikeys.
     ///
     /// Set this as early as possible in your application's lifecycle, preferably in your AppDelegate or SceneDelegate.
     /// New instances of STPAPIClient will be initialized with this value.
     /// @warning Make sure not to ship your test API keys to the App Store! This will log a warning if you use your test key in a release build.
-    @objc public static var defaultPublishableKey: String?
+    @objc private(set) static var defaultPublishableKey: String?
+    
+    @MainActor public static func setDefault(publishableKey: String?) {
+        defaultPublishableKey = publishableKey
+    }
 
     /// Set this to your Stripe publishable API key, obtained from https://dashboard.stripe.com/apikeys.
     ///
     /// Set this as early as possible in your application's lifecycle, preferably in your AppDelegate or SceneDelegate.
     /// New instances of STPAPIClient will be initialized with this value.
     /// @warning Make sure not to ship your test API keys to the App Store! This will log a warning if you use your test key in a release build.
-    @objc public func setDefaultPublishableKey(_ publishableKey: String) {
+    @MainActor @objc public func setDefaultPublishableKey(_ publishableKey: String) {
         StripeAPI.defaultPublishableKey = publishableKey
         STPAPIClient.shared.publishableKey = publishableKey
     }
@@ -34,14 +38,14 @@ import PassKit
     /// For more details on the information we collect, visit https://stripe.com/docs/disputes/prevention/advanced-fraud-detection
     /// Disabling this setting will reduce Stripe's ability to protect your business from fraudulent payments.
     /// The default value is YES.
-    @objc public static var advancedFraudSignalsEnabled: Bool = true
+    @MainActor @objc public static var advancedFraudSignalsEnabled: Bool = true
 
     /// If the SDK receives a "Too Many Requests" (429) status code from Stripe,
     /// it will automatically retry the request.
     ///
     /// The default value is 3.
     /// See https://stripe.com/docs/rate-limits for more information.
-    @objc public static var maxRetries = 3
+    @objc public static let maxRetries = 3
 
     // MARK: - Apple Pay
 
@@ -50,7 +54,7 @@ import PassKit
     ///
     /// The default value is NO.
     /// @note JCB is only supported on iOS 10.1+
-    @objc public class var jcbPaymentNetworkSupported: Bool {
+    @MainActor @objc public static var jcbPaymentNetworkSupported: Bool {
         get {
             return self.additionalEnabledApplePayNetworks.contains(.JCB)
         }
@@ -75,7 +79,7 @@ import PassKit
     /// Set this property to enable other card networks in addition to these, such as .JCB, .cartesBancaires, or .eftpos (for eftpos Australia).
     /// For example, `additionalEnabledApplePayNetworks = [.eftpos]` enables eftpos Australia.
     /// Note: These networks require the merchant to support the respective payment network before enabling.
-    @objc public static var additionalEnabledApplePayNetworks: [PKPaymentNetwork] = [] {
+    @MainActor @objc public static var additionalEnabledApplePayNetworks: [PKPaymentNetwork] = [] {
         didSet {
             // Reset deviceSupportsApplePay for the updated network list:
             _deviceSupportsApplePay = nil
@@ -91,7 +95,7 @@ import PassKit
     /// `supportedNetworks` property of this payment request, which by default should be
     /// `[.amex, .masterCard, .visa, .discover]`.
     /// - Returns: whether or not the user is currently able to pay with Apple Pay.
-    @objc public class func canSubmitPaymentRequest(_ paymentRequest: PKPaymentRequest) -> Bool {
+    @objc public static func canSubmitPaymentRequest(_ paymentRequest: PKPaymentRequest) -> Bool {
         if !self.deviceSupportsApplePay() {
             return false
         }
@@ -102,7 +106,7 @@ import PassKit
         return paymentRequest.paymentSummaryItems.last?.amount.floatValue ?? 0.0 >= 0
     }
 
-    @_spi(STP) public class func supportedPKPaymentNetworks() -> [PKPaymentNetwork] {
+    @MainActor @_spi(STP) public static func supportedPKPaymentNetworks() -> [PKPaymentNetwork] {
         return additionalEnabledApplePayNetworks + [
             .amex,
             .masterCard,
@@ -125,7 +129,7 @@ import PassKit
     /// - Returns: YES if the device is currently able to make Apple Pay payments via one
     /// of the supported networks. NO if the user does not have a saved card of a
     /// supported type, or other restrictions prevent payment (such as parental controls).
-    @objc public class func deviceSupportsApplePay() -> Bool {
+    @objc public static func deviceSupportsApplePay() -> Bool {
         if let deviceSupportsApplePay = _deviceSupportsApplePay {
             return deviceSupportsApplePay
         }
